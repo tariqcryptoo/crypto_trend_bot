@@ -1,65 +1,46 @@
-import logging
+import time
 import requests
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters
-import feedparser
-import html
-from datetime import datetime
+import telegram
+from bs4 import BeautifulSoup
 
-# إعدادات البوت
-TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
-GROUP_CHAT_ID = -4734806120
+TOKEN = '7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ'
+CHAT_ID = -4734806120
+bot = telegram.Bot(token=TOKEN)
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+def fetch_trending_news():
+    try:
+        url = 'https://beincrypto.com/news/'
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        articles = soup.find_all('article')
 
-# روابط الأخبار
-FEED_URLS = [
-    "https://beincrypto.com/feed",
-    "https://decrypt.co/feed",
-    "https://cointelegraph.com/rss",
-]
+        trending = []
+        for article in articles:
+            title_tag = article.find('h3')
+            if title_tag:
+                title = title_tag.text.strip()
+                link = article.find('a', href=True)['href']
+                if "bitcoin" in title.lower() or "crypto" in title.lower():
+                    trending.append(f"{title}\n{link}")
+        return trending
+    except Exception as e:
+        return f"Error while fetching news: {e}"
 
-def clean_html(text):
-    return html.unescape(text.replace("<![CDATA[", "").replace("]]>", "")).strip()
+while True:
+    try:
+        bot.send_message(chat_id=CHAT_ID, text="تم تشغيل السكربت")
 
-def fetch_top_news():
-    for url in FEED_URLS:
-        try:
-            feed = feedparser.parse(url)
-            for entry in feed.entries[:5]:
-                title = clean_html(entry.title)
-                link = entry.link
-                summary = clean_html(entry.summary) if hasattr(entry, 'summary') else ""
+        trending_news = fetch_trending_news()
 
-                if any(keyword in title.lower() for keyword in ["bitcoin", "btc", "crypto", "binance", "ethereum", "eth", "sol", "airdrop", "crash", "pump", "hack", "lawsuit", "drop"]):
-                    message = f"*عنوان:* {title}\n*الملخص:* {summary}\n[اقرأ التفاصيل]({link})"
-                    return message
-        except Exception as e:
-            logging.error(f"خطأ أثناء قراءة الخلاصة: {e}")
-    return None
+        if isinstance(trending_news, str):
+            # رسالة الخطأ
+            bot.send_message(chat_id=CHAT_ID, text=trending_news)
+        elif trending_news:
+            for news in trending_news[:3]:  # نرسل فقط أول 3 أخبار ترند
+                bot.send_message(chat_id=CHAT_ID, text=news)
+        else:
+            bot.send_message(chat_id=CHAT_ID, text="تم الفحص ومافي خبر يستاهل")
+    except Exception as error:
+        bot.send_message(chat_id=CHAT_ID, text=f"خطأ في التشغيل: {error}")
 
-def send_news(context: CallbackContext):
-    news = fetch_top_news()
-    if news:
-        context.bot.send_message(chat_id=GROUP_CHAT_ID, text=news, parse_mode="Markdown", disable_web_page_preview=False)
-    else:
-        context.bot.send_message(chat_id=GROUP_CHAT_ID, text="✅ تم الفحص ومافي خبر يستاهل.")
-
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("أهلاً بك! البوت جاهز لفحص الأخبار.")
-
-def main():
-    updater = Updater(TOKEN)
-    dispatcher = updater.dispatcher
-
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, lambda update, context: update.message.reply_text("تم استلام رسالتك!")))
-
-    job_queue = updater.job_queue
-    job_queue.run_repeating(send_news, interval=600, first=10)
-
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+    time.sleep(600)  # كل 10 دقائق
