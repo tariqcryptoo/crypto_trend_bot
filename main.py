@@ -7,7 +7,9 @@ CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
 
 # الكلمات المفتاحية للتصنيف
 TREND_KEYWORDS = ["pump", "hype", "trending", "viral", "explode", "surge", "moon"]
-IMPORTANT_KEYWORDS = ["partnership", "launch", "update", "mainnet", "airdrop", "listing", "Binance", "Coinbase", "SEC"]
+IMPORTANT_KEYWORDS = ["partnership", "launch", "update", "mainnet", "listing", "Binance", "Coinbase", "SEC"]
+AIRDROP_MAIN = ["airdrop"]
+AIRDROP_SUPPORT = ["eligible", "snapshot", "distribution", "claim", "confirmed", "binance", "launch", "token"]
 
 def send_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -35,16 +37,22 @@ def translate_text(text):
 
 def classify_news(title):
     title_lower = title.lower()
+
+    if any(main in title_lower for main in AIRDROP_MAIN) and any(support in title_lower for support in AIRDROP_SUPPORT):
+        return "🎁 فرصة Airdrop"
+
     for word in TREND_KEYWORDS:
         if word in title_lower:
-            return "خبر ترند"
+            return "✅ خبر ترند"
+
     for word in IMPORTANT_KEYWORDS:
         if word in title_lower:
-            return "خبر مهم"
+            return "✅ خبر مهم"
+
     return None
 
 def fetch_crypto():
-    seen_links = []  # تخزين مؤقت لروابط الأخبار أثناء هذا التشغيل فقط
+    seen_links = []
 
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=hot"
     response = requests.get(url)
@@ -61,7 +69,7 @@ def fetch_crypto():
             classification = classify_news(title)
             if classification:
                 translated_title = translate_text(title)
-                message = f"✅ {classification}:\n\n{translated_title}\n\nالمصدر: {link}"
+                message = f"{classification}:\n\n{translated_title}\n\nالمصدر: {link}"
                 send_message(message)
                 seen_links.append(link)
                 break
@@ -71,5 +79,5 @@ def fetch_crypto():
         send_message("🔄 تم الفحص - ما فيه أخبار جديدة حالياً.")
 
 # تشغيل البوت
-send_message("✅ البوت اشتغل مع منع التكرار المؤقت.")
+send_message("✅ البوت اشتغل مع تصنيف Airdrop (المهم فقط) + ترند + مهم.")
 fetch_crypto()
