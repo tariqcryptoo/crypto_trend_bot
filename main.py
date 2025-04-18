@@ -13,6 +13,22 @@ def send_message(message):
     }
     requests.post(url, data=payload)
 
+def translate_text(text):
+    try:
+        url = "https://libretranslate.de/translate"
+        payload = {
+            "q": text,
+            "source": "en",
+            "target": "ar",
+            "format": "text"
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(url, json=payload, headers=headers)
+        result = response.json()
+        return result["translatedText"]
+    except Exception as e:
+        return f"(ترجمة فشلت): {text}"
+
 def fetch_crypto():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=hot"
     response = requests.get(url)
@@ -21,14 +37,15 @@ def fetch_crypto():
     if "results" in data and len(data["results"]) > 0:
         for post in data["results"]:
             title = post["title"]
-            message = f"🚨 خبر ترند (بدون ترجمة):\n\n{title}\n\nالمصدر: {post['url']}"
+            translated_title = translate_text(title)
+            message = f"🚨 خبر ترند:\n\n{translated_title}\n\nالمصدر: {post['url']}"
             send_message(message)
             break
     else:
         send_message("ما فيه أخبار مهمة حالياً.")
 
-# رسالة تأكيد التشغيل
-send_message("✅ البوت اشتغل بدون ترجمة، نختبر الرسائل...")
+# رسالة تأكيد
+send_message("✅ البوت اشتغل بعد تعديل الترجمة الجديدة.")
 
 # بدء التنفيذ
 fetch_crypto()
