@@ -5,7 +5,7 @@ TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
 
-# فلترة الكلمات
+# الكلمات المفتاحية للتصنيف
 TREND_KEYWORDS = ["pump", "hype", "trending", "viral", "explode", "surge", "moon"]
 IMPORTANT_KEYWORDS = ["partnership", "launch", "update", "mainnet", "airdrop", "listing", "Binance", "Coinbase", "SEC"]
 
@@ -30,7 +30,7 @@ def translate_text(text):
         response = requests.post(url, json=payload, headers=headers)
         result = response.json()
         return result["translatedText"]
-    except Exception as e:
+    except Exception:
         return f"(ترجمة فشلت): {text}"
 
 def classify_news(title):
@@ -44,6 +44,8 @@ def classify_news(title):
     return None
 
 def fetch_crypto():
+    seen_links = []  # تخزين مؤقت لروابط الأخبار أثناء هذا التشغيل فقط
+
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=hot"
     response = requests.get(url)
     data = response.json()
@@ -51,18 +53,23 @@ def fetch_crypto():
     if "results" in data and len(data["results"]) > 0:
         for post in data["results"]:
             title = post["title"]
-            classification = classify_news(title)
+            link = post["url"]
 
+            if link in seen_links:
+                continue
+
+            classification = classify_news(title)
             if classification:
                 translated_title = translate_text(title)
-                message = f"✅ {classification}:\n\n{translated_title}\n\nالمصدر: {post['url']}"
+                message = f"✅ {classification}:\n\n{translated_title}\n\nالمصدر: {link}"
                 send_message(message)
+                seen_links.append(link)
                 break
         else:
-            send_message("🔄 تم الفحص - فيه أخبار لكن ما فيها شي مهم أو ترند.")
+            send_message("🔄 تم الفحص - فيه أخبار لكن كلها مكررة أو غير مهمة.")
     else:
         send_message("🔄 تم الفحص - ما فيه أخبار جديدة حالياً.")
 
 # تشغيل البوت
-send_message("✅ البوت اشتغل مع تصنيف الأخبار وإرسال تقارير كل 10 دقايق.")
+send_message("✅ البوت اشتغل مع منع التكرار المؤقت.")
 fetch_crypto()
