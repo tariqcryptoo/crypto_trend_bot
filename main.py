@@ -1,61 +1,67 @@
 import requests
-import time
+import html
+import re
 from deep_translator import GoogleTranslator
+from telegram import Bot
 
-# إعدادات التوكن ومعرف القروب في تيليجرام
+# إعدادات البوت
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
+CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# رابط API الخاص بموقع CryptoPanic
-CRYPTO_PANIC_API = "https://cryptopanic.com/api/v1/posts/?auth_token=9889e4a8021167e15bc0d74858809a6e0195fa2e&kind=news"
+bot = Bot(token=TELEGRAM_TOKEN)
+sent_ids = []
 
-# حفظ آخر معرف خبر تم إرساله لتجنب التكرار
-latest_news_id = None
-
-def fetch_crypto_news():
-    global latest_news_id
+# استخراج اسم الموقع من الرابط
+def extract_source(url):
     try:
-        response = requests.get(CRYPTO_PANIC_API)
-        data = response.json()
+        return re.search(r"https?://([^/]+)/", url).group(1)
+    except:
+        return "crypto site"
 
-        if "results" not in data or not data["results"]:
-            send_message("ما فيه أخبار جديدة حالياً.")
-            return
+# ترجمة العنوان والمحتوى
+def human_translate(text):
+    try:
+        return GoogleTranslator(source='en', target='ar').translate(text)
+    except:
+        return "⚠️ فشل الترجمة"
 
-        for article in data["results"]:
-            news_id = article.get("id")
-            title = article.get("title", "")
-            url = article.get("url", "")
-            source = article.get("source", {}).get("domain", "غير معروف")
+# إرسال الرسالة إلى تيليجرام
+def send_to_telegram(title, url, content):
+    source = extract_source(url)
+    message = (
+        f"عنوان مثير للاهتمام في سوق الكريبتو،\n"
+        f"{human_translate(title)}:\n\n"
+        f"المصدر: {source}\n"
+        f"التفاصيل في الخبر:\n{url}"
+    )
+    bot.send_message(chat_id=CHAT_ID, text=message)
 
-            if news_id == latest_news_id:
-                continue  # تخطي الخبر إذا تم إرساله مسبقاً
+# جلب الأخبار من CryptoPanic
+def fetch_crypto_news():
+    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=important"
+    response = requests.get(url)
+    if response.status_code != 200:
+        bot.send_message(chat_id=CHAT_ID, text="⚠️ فشل جلب الأخبار.")
+        return
 
-            latest_news_id = news_id
+    data = response.json()
+    posts = data.get("results", [])[:5]  # أرسل فقط 5 أخبار
 
-            # إعادة صياغة الخبر للغة عربية مفهومة
-            translated_title = GoogleTranslator(source='auto', target='ar').translate(title)
+    for post in posts:
+        post_id = post.get("id")
+        if post_id in sent_ids:
+            continue  # منع التكرار
+        sent_ids.append(post_id)
 
-            message = (
-                f"عنوان مثير للاهتمام في سوق الكريبتو،\n"
-                f"{translated_title}\n"
-                f"المصدر: {source}\n"
-                f"التفاصيل في الخبر:\n{url}"
-            )
+        title = post.get("title", "")
+        link = post.get("url", "")
+        content = post.get("body", "") or post.get("description", "")
 
-            send_message(message)
-            time.sleep(2)  # تأخير بسيط لتجنب سبام التيليجرام
+        if not link or not title:
+            continue
 
-    except Exception as e:
-        send_message(f"فشل جلب الأخبار: {e}")
-
-def send_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    requests.post(url, data=payload)
+        send_to_telegram(title, link, content)
 
 # تشغيل البوت
 fetch_crypto_news()
