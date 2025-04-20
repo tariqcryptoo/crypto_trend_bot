@@ -1,60 +1,59 @@
 import requests
+import time
 from deep_translator import GoogleTranslator
-import html
 
-# إعدادات البوت (مباشرة بدون تعديل منك)
+# إعدادات التوكن ومعرف القروب في تيليجرام
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
-CRYPTO_PANIC_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# جلب الأخبار من CryptoPanic
+# رابط API الخاص بموقع CryptoPanic
+CRYPTO_PANIC_API = "https://cryptopanic.com/api/v1/posts/?auth_token=9889e4a8021167e15bc0d74858809a6e0195fa2e&kind=news"
+
+# حفظ آخر معرف خبر تم إرساله لتجنب التكرار
+latest_news_id = None
+
 def fetch_crypto_news():
-    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_PANIC_API_KEY}&public=true"
+    global latest_news_id
     try:
-        response = requests.get(url)
-        if response.status_code != 200:
-            send_to_telegram(f"فشل جلب الأخبار {response.status_code}")
+        response = requests.get(CRYPTO_PANIC_API)
+        data = response.json()
+
+        if "results" not in data or not data["results"]:
+            send_message("ما فيه أخبار جديدة حالياً.")
             return
 
-        data = response.json()
-        posts = data.get("results", [])
+        for article in data["results"]:
+            news_id = article.get("id")
+            title = article.get("title", "")
+            url = article.get("url", "")
+            source = article.get("source", {}).get("domain", "غير معروف")
 
-        for post in posts:
-            title = post.get("title", "")
-            description = post.get("body", "") or ""
-            source = post.get("domain", "")
-            url = post.get("url", "")
+            if news_id == latest_news_id:
+                continue  # تخطي الخبر إذا تم إرساله مسبقاً
 
-            full_text = f"{title}. {description}"
-            summary = summarize_to_arabic(full_text)
+            latest_news_id = news_id
 
-            final_message = (
+            # إعادة صياغة الخبر للغة عربية مفهومة
+            translated_title = GoogleTranslator(source='auto', target='ar').translate(title)
+
+            message = (
                 f"عنوان مثير للاهتمام في سوق الكريبتو،\n"
-                f"{summary}\n"
+                f"{translated_title}\n"
                 f"المصدر: {source}\n"
                 f"التفاصيل في الخبر:\n{url}"
             )
-            send_to_telegram(final_message)
+
+            send_message(message)
+            time.sleep(2)  # تأخير بسيط لتجنب سبام التيليجرام
 
     except Exception as e:
-        send_to_telegram(f"حدث خطأ أثناء تشغيل البوت: {e}")
+        send_message(f"فشل جلب الأخبار: {e}")
 
-# تلخيص الخبر وصياغته بالعربية البشرية
-def summarize_to_arabic(text):
-    try:
-        translated = GoogleTranslator(source='auto', target='ar').translate(text)
-        translated = html.unescape(translated)
-        return translated.strip()
-    except Exception as e:
-        return "لم نتمكن من تلخيص الخبر حالياً."
-
-# إرسال إلى تيليجرام
-def send_to_telegram(message):
+def send_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML"
+        "text": message
     }
     requests.post(url, data=payload)
 
