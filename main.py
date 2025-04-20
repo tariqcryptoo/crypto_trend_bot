@@ -1,82 +1,67 @@
 import requests
+from deep_translator import GoogleTranslator
 
-# إعدادات البوت
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# إعادة الصياغة البشرية
-def rewrite_human_friendly(title):
-    if not title:
-        return None
+# إعادة صياغة الخبر بلغة بشرية مبسطة
+def human_rewrite(title):
+    title = title.lower()
+    if "airdrop" in title:
+        return "تم الإعلان عن توزيع مجاني (Airdrop) جديد."
+    if "binance" in title and "support" in title:
+        return "منصة Binance أعلنت دعمًا جديدًا لعملة رقمية."
+    if "whale" in title and "sell" in title:
+        return "حوت كريبتو قام ببيع ضخم قد يؤثر على السوق."
+    if "mining" in title or "hashrate" in title or "asic" in title:
+        return "تحديث جديد في مجال التعدين أو زيادة في hashrate."
+    if "etf" in title or "sec" in title:
+        return "تحديث متعلق بصناديق ETF أو تنظيمات هيئة SEC."
+    if "launch" in title or "mainnet" in title or "testnet" in title:
+        return "إطلاق شبكة أو مشروع جديد في السوق."
+    if "exploit" in title or "hack" in title:
+        return "تحذير: تم رصد اختراق أو ثغرة في مشروع كريبتو."
+    if "investment" in title or "funding" in title:
+        return "خبر عن استثمار أو تمويل كبير لمشروع جديد."
+    return None
 
-    title_lower = title.lower()
-
-    if "airdrop" in title_lower:
-        return "تم الإعلان عن Airdrop جديد، تابع التفاصيل."
-    elif "binance" in title_lower and "support" in title_lower:
-        return "منصة Binance أعلنت دعمًا لعملة جديدة."
-    elif "whale" in title_lower and "sell" in title_lower:
-        return "حوت كريبتو قام ببيع كبير، قد يؤثر على السوق."
-    elif "launch" in title_lower or "released" in title_lower:
-        return "إطلاق رسمي لمشروع أو منتج جديد."
-    elif "testnet" in title_lower or "mainnet" in title_lower:
-        return "إطلاق شبكة اختبارية أو رئيسية لمشروع كريبتو."
-    elif "etf" in title_lower or "sec" in title_lower:
-        return "تحديث تنظيمي أو خبر متعلق بصناديق ETF."
-    elif "partnership" in title_lower or "collaborat" in title_lower:
-        return "شراكة جديدة بين جهات في عالم الكريبتو."
-    elif "hack" in title_lower or "exploit" in title_lower:
-        return "تحذير: تم اكتشاف اختراق أو ثغرة أمنية."
-    elif "btc" in title_lower and "recovery" in title_lower:
-        return "البيتكوين يشهد تعافي وارتفاع في السعر."
-    elif "investment" in title_lower or "funding" in title_lower:
-        return "خبر عن تمويل جديد أو استثمار كبير."
-    elif "stablecoin" in title_lower:
-        return "زيادة الاهتمام بعملات الـStablecoin في الأسواق."
-    elif "token" in title_lower and "utility" in title_lower:
-        return "تحديث جديد يخص فائدة التوكن واستخدامه."
-    else:
-        return None
-
-# إرسال رسالة لتليجرام
+# إرسال الرسالة إلى تلغرام
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {"chat_id": CHAT_ID, "text": message}
-    try:
-        requests.post(url, data=data)
-    except Exception as e:
-        print(f"Telegram Error: {e}")
+    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    requests.post(url, data=payload)
 
-# جلب الأخبار ومعالجتها
+# جلب الأخبار وتحليلها
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     try:
-        response = requests.get(url)
-        if response.status_code != 200:
-            send_to_telegram(f"❌ فشل جلب الأخبار: {response.status_code}")
-            return
-        news_items = response.json().get("results", [])
-    except Exception as e:
+        res = requests.get(url)
+        news = res.json().get("results", [])
+    except:
         send_to_telegram("❌ خطأ في الاتصال بمصدر الأخبار.")
         return
 
-    if not news_items:
-        send_to_telegram("✅ تم الفحص: لا توجد أخبار حالياً.")
-        return
+    count = 0
+    for item in news:
+        if count >= 3:
+            break
 
-    for item in news_items:
-        title = item.get("title", "").strip()
-        link = item.get("url", "").strip()
-        rewritten = rewrite_human_friendly(title)
+        title_en = item.get("title", "")
+        link = item.get("url", "")
+        summary = human_rewrite(title_en)
 
-        if rewritten:
-            message = f"{rewritten}\nالعنوان: {title or 'غير متوفر'}\n{link}"
-        else:
-            fallback_title = title if title else "لم يتم العثور على عنوان."
-            message = f"عنوان مثير للاهتمام في سوق الكريبتو، التفاصيل في الخبر:\n{fallback_title}\n{link}"
+        if summary:
+            try:
+                translated_title = GoogleTranslator(source='en', target='ar').translate(title_en)
+                message = f"*{summary}*\n\nالعنوان: {translated_title}\n{link}"
+                send_to_telegram(message)
+                count += 1
+            except:
+                continue
 
-        send_to_telegram(message)
+    if count == 0:
+        send_to_telegram("✅ تم الفحص: لا يوجد خبر واضح ومفهوم حاليًا.")
 
 # تشغيل البوت
 if __name__ == "__main__":
