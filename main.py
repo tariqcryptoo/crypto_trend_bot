@@ -6,14 +6,32 @@ TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "YOUR_CRYPTOPANIC_API_KEY"
 
-# الترجمة
-def translate_to_arabic(text):
+# ترجمة ذكية
+def translate_text(text):
     try:
-        return GoogleTranslator(source='auto', target='ar').translate(text)
-    except Exception as e:
-        return text  # fallback بدون ترجمة
+        translated = GoogleTranslator(source='auto', target='ar').translate(text)
+        # نحافظ على المصطلحات المهمة بدون ترجمتها
+        keywords = ["Bitcoin", "Ethereum", "Binance", "Solana", "Airdrop", "NFT", "Arbitrum"]
+        for word in keywords:
+            translated = translated.replace(word.lower(), word).replace(word.upper(), word)
+        return translated
+    except:
+        return text
 
-# نفس دوال الفلترة السابقة...
+# توليد ملخص إنساني بناءً على نوع الخبر
+def generate_summary(tag):
+    if tag == "🔵 Airdrop":
+        return "خبر عن توزيع مجاني (Airdrop)، تابع التفاصيل إذا كنت من المستخدمين المؤهلين."
+    elif tag == "⚒️ تعدين":
+        return "تحديث يتعلق بالتعدين، قد يؤثر على شبكة العملة أو صعوبتها."
+    elif tag == "🔥 ترند":
+        return "الخبر عليه تفاعل كبير، وقد يكون مؤشر لتحرك السوق."
+    elif tag == "📌 خبر مهم":
+        return "خبر مهم في السوق، يستحق المتابعة لأنه متعلق بمؤسسات أو تغييرات كبيرة."
+    else:
+        return "تفاصيل خبر جديد في سوق الكريبتو."
+
+# دوال التصنيف
 def is_trending(news_item):
     return news_item.get("votes", {}).get("positive", 0) >= 20
 
@@ -38,7 +56,7 @@ def send_to_telegram(message):
     except:
         pass
 
-# جلب وتحليل الأخبار
+# جلب الأخبار وتصنيفها
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     try:
@@ -68,8 +86,10 @@ def fetch_crypto_news():
         else:
             continue
 
-        translated_title = translate_to_arabic(title)
-        msg = f"{tag}:\n{translated_title}\n{link}"
+        translated_title = translate_text(title)
+        summary = generate_summary(tag)
+
+        msg = f"{tag}:\n{translated_title}\n{link}\n\n**تحليل:** {summary}"
         send_to_telegram(msg)
         sent_anything = True
 
