@@ -1,12 +1,10 @@
 import requests
 import time
 
-# إعدادات البوت
 TELEGRAM_TOKEN = "YOUR_TELEGRAM_TOKEN"
 CHAT_ID = "YOUR_CHAT_ID"
 CRYPTO_API_KEY = "YOUR_CRYPTOPANIC_API_KEY"
 
-# الكلمات المفتاحية
 def is_trending(news_item):
     return news_item.get("votes", {}).get("positive", 0) >= 20
 
@@ -22,7 +20,6 @@ def is_important(text):
     important_keywords = ["bitcoin", "ethereum", "binance", "sec", "etf", "coinbase", "blackrock"]
     return any(word in text.lower() for word in important_keywords)
 
-# إرسال رسالة تيليجرام
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": message}
@@ -30,7 +27,6 @@ def send_to_telegram(message):
     if response.status_code != 200:
         print("فشل الإرسال:", response.status_code)
 
-# جلب الأخبار
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     response = requests.get(url)
@@ -56,6 +52,5 @@ def fetch_crypto_news():
 
         send_to_telegram(msg)
 
-# تشغيل البوت
 if __name__ == "__main__":
     fetch_crypto_news()
