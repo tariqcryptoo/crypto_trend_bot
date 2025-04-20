@@ -1,53 +1,34 @@
 import requests
-from deep_translator import GoogleTranslator
 
-# إعداداتك
+# بيانات الاتصال
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
-CRYPTO_API_KEY = "YOUR_CRYPTOPANIC_API_KEY"
+CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# ترجمة ذكية
-def translate_text(text):
-    try:
-        translated = GoogleTranslator(source='auto', target='ar').translate(text)
-        # نحافظ على المصطلحات المهمة بدون ترجمتها
-        keywords = ["Bitcoin", "Ethereum", "Binance", "Solana", "Airdrop", "NFT", "Arbitrum"]
-        for word in keywords:
-            translated = translated.replace(word.lower(), word).replace(word.upper(), word)
-        return translated
-    except:
-        return text
+# إعادة صياغة الخبر بلغة بشرية
+def rewrite_human_friendly(title):
+    title_lower = title.lower()
 
-# توليد ملخص إنساني بناءً على نوع الخبر
-def generate_summary(tag):
-    if tag == "🔵 Airdrop":
-        return "خبر عن توزيع مجاني (Airdrop)، تابع التفاصيل إذا كنت من المستخدمين المؤهلين."
-    elif tag == "⚒️ تعدين":
-        return "تحديث يتعلق بالتعدين، قد يؤثر على شبكة العملة أو صعوبتها."
-    elif tag == "🔥 ترند":
-        return "الخبر عليه تفاعل كبير، وقد يكون مؤشر لتحرك السوق."
-    elif tag == "📌 خبر مهم":
-        return "خبر مهم في السوق، يستحق المتابعة لأنه متعلق بمؤسسات أو تغييرات كبيرة."
+    if "airdrop" in title_lower:
+        return f"تم الإعلان عن توزيع مجاني (Airdrop) لعملة أو مشروع جديد. التفاصيل تقول: {title}"
+    elif "binance" in title_lower and "support" in title_lower:
+        return f"منصة Binance أعلنت دعم رسمي لعملة جديدة. محتوى الإعلان: {title}"
+    elif "launch" in title_lower:
+        return f"فيه مشروع أو منتج جديد تم إطلاقه اليوم. العنوان يقول: {title}"
+    elif "partnership" in title_lower or "collaborat" in title_lower:
+        return f"تم الكشف عن شراكة أو تعاون جديد بين جهات في سوق الكريبتو. نص الخبر: {title}"
+    elif "hashrate" in title_lower or "mining" in title_lower:
+        return f"تطور جديد في عالم التعدين أو ارتفاع بمعدل hashrate. الخبر يقول: {title}"
+    elif "etf" in title_lower or "sec" in title_lower:
+        return f"تحديث يتعلق بصناديق ETF أو الجهات التنظيمية مثل SEC. العنوان: {title}"
+    elif "hack" in title_lower or "exploit" in title_lower:
+        return f"تحذير من اختراق أو استغلال في أحد المشاريع. مكتوب: {title}"
+    elif "investment" in title_lower or "funding" in title_lower:
+        return f"خبر عن استثمار جديد أو جولة تمويل في أحد مشاريع الكريبتو. العنوان: {title}"
     else:
-        return "تفاصيل خبر جديد في سوق الكريبتو."
+        return f"ملخص لخبر كريبتو جديد: {title}"
 
-# دوال التصنيف
-def is_trending(news_item):
-    return news_item.get("votes", {}).get("positive", 0) >= 20
-
-def is_mining_related(text):
-    keywords = ["mining", "hashrate", "asic", "antminer", "whatsminer"]
-    return any(word in text.lower() for word in keywords)
-
-def is_airdrop_related(text):
-    keywords = ["airdrop", "claim", "snapshot", "retroactive", "free token"]
-    return any(word in text.lower() for word in keywords)
-
-def is_important(text):
-    keywords = ["bitcoin", "ethereum", "binance", "sec", "etf", "coinbase", "blackrock"]
-    return any(word in text.lower() for word in keywords)
-
-# إرسال تيليجرام
+# إرسال رسالة إلى تيليجرام
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": message}
@@ -56,7 +37,7 @@ def send_to_telegram(message):
     except:
         pass
 
-# جلب الأخبار وتصنيفها
+# جلب وتحليل الأخبار من CryptoPanic
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     try:
@@ -74,27 +55,13 @@ def fetch_crypto_news():
     for item in news_items:
         title = item.get("title", "")
         link = item.get("url", "")
-
-        if is_airdrop_related(title):
-            tag = "🔵 Airdrop"
-        elif is_mining_related(title):
-            tag = "⚒️ تعدين"
-        elif is_trending(item):
-            tag = "🔥 ترند"
-        elif is_important(title):
-            tag = "📌 خبر مهم"
-        else:
-            continue
-
-        translated_title = translate_text(title)
-        summary = generate_summary(tag)
-
-        msg = f"{tag}:\n{translated_title}\n{link}\n\n**تحليل:** {summary}"
-        send_to_telegram(msg)
+        rewritten = rewrite_human_friendly(title)
+        message = f"{rewritten}\n{link}"
+        send_to_telegram(message)
         sent_anything = True
 
     if not sent_anything:
-        send_to_telegram("✅ تم الفحص: لا يوجد خبر ينطبق عليه الفلاتر حالياً.")
+        send_to_telegram("✅ تم الفحص: لا يوجد خبر ينطبق عليه الشروط حالياً.")
 
 # تشغيل البوت
 if __name__ == "__main__":
