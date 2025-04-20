@@ -66,3 +66,4 @@ def fetch_crypto_news():
 # التشغيل
 if __name__ == "__main__":
     fetch_crypto_news()
+    send_to_telegram("✅ اختبار يدوي: هذا مجرد تأكد إن التوكن و CHAT_ID شغالين.")
