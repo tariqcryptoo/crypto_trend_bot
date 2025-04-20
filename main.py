@@ -5,39 +5,39 @@ TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# إعادة صياغة الخبر بلغة بشرية
+# دالة إعادة الصياغة البشرية للخبر
 def rewrite_human_friendly(title):
     title_lower = title.lower()
 
     if "airdrop" in title_lower:
-        return f"تم الإعلان عن توزيع مجاني (Airdrop) لعملة أو مشروع جديد. التفاصيل تقول: {title}"
+        return f"تم الإعلان عن توزيع مجاني (Airdrop) لمشروع أو عملة. التفاصيل: {title}"
     elif "binance" in title_lower and "support" in title_lower:
-        return f"منصة Binance أعلنت دعم رسمي لعملة جديدة. محتوى الإعلان: {title}"
+        return f"منصة Binance أعلنت عن دعم رسمي لعملة جديدة. عنوان الخبر: {title}"
     elif "launch" in title_lower:
-        return f"فيه مشروع أو منتج جديد تم إطلاقه اليوم. العنوان يقول: {title}"
+        return f"إطلاق جديد في السوق، مشروع أو منتج تم الإعلان عنه. التفاصيل: {title}"
     elif "partnership" in title_lower or "collaborat" in title_lower:
-        return f"تم الكشف عن شراكة أو تعاون جديد بين جهات في سوق الكريبتو. نص الخبر: {title}"
+        return f"فيه شراكة جديدة بين جهات في سوق الكريبتو. العنوان: {title}"
     elif "hashrate" in title_lower or "mining" in title_lower:
-        return f"تطور جديد في عالم التعدين أو ارتفاع بمعدل hashrate. الخبر يقول: {title}"
+        return f"تطور جديد في التعدين أو في معدل hashrate. نص الخبر: {title}"
     elif "etf" in title_lower or "sec" in title_lower:
-        return f"تحديث يتعلق بصناديق ETF أو الجهات التنظيمية مثل SEC. العنوان: {title}"
+        return f"خبر يخص صناديق ETF أو الجهات التنظيمية مثل SEC. مكتوب: {title}"
     elif "hack" in title_lower or "exploit" in title_lower:
-        return f"تحذير من اختراق أو استغلال في أحد المشاريع. مكتوب: {title}"
+        return f"تحذير من اختراق أو استغلال أمني في مشروع كريبتو. العنوان: {title}"
     elif "investment" in title_lower or "funding" in title_lower:
-        return f"خبر عن استثمار جديد أو جولة تمويل في أحد مشاريع الكريبتو. العنوان: {title}"
+        return f"استثمار أو جولة تمويل جديدة في أحد المشاريع. التفاصيل: {title}"
     else:
-        return f"ملخص لخبر كريبتو جديد: {title}"
+        return f"خبر جديد في عالم الكريبتو: {title}"
 
-# إرسال رسالة إلى تيليجرام
+# إرسال الرسائل إلى تيليجرام
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": message}
     try:
         requests.post(url, data=data)
-    except:
-        pass
+    except Exception as e:
+        print(f"Telegram error: {e}")
 
-# جلب وتحليل الأخبار من CryptoPanic
+# جلب وتحليل الأخبار
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     try:
@@ -46,8 +46,8 @@ def fetch_crypto_news():
             send_to_telegram(f"❌ فشل جلب الأخبار: {response.status_code}")
             return
         news_items = response.json().get("results", [])
-    except:
-        send_to_telegram("❌ خطأ في الاتصال بمصدر الأخبار.")
+    except Exception as e:
+        send_to_telegram(f"❌ خطأ في الاتصال بمصدر الأخبار.")
         return
 
     sent_anything = False
@@ -61,7 +61,7 @@ def fetch_crypto_news():
         sent_anything = True
 
     if not sent_anything:
-        send_to_telegram("✅ تم الفحص: لا يوجد خبر ينطبق عليه الشروط حالياً.")
+        send_to_telegram("✅ تم الفحص: لا يوجد خبر حالياً ينطبق عليه الشروط.")
 
 # تشغيل البوت
 if __name__ == "__main__":
