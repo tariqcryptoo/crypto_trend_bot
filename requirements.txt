@@ -1,3 +1,2 @@
 python-telegram-bot==20.3
 deep-translator
-googletrans==4.0.0rc1
