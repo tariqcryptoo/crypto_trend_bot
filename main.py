@@ -1,83 +1,66 @@
 import requests
+import time
+from googletrans import Translator
 
-# إعدادات البوت
-TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
-CHAT_ID = "-4734806120"
-CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
+TELEGRAM_TOKEN = "YOUR_TELEGRAM_TOKEN"
+CHAT_ID = "YOUR_CHAT_ID"
+CRYPTO_API_KEY = "YOUR_CRYPTOPANIC_API_KEY"
 
-# الكلمات المفتاحية للتصنيف
-TREND_KEYWORDS = ["pump", "hype", "trending", "viral", "explode", "surge", "moon"]
-IMPORTANT_KEYWORDS = ["partnership", "launch", "update", "mainnet", "listing", "Binance", "Coinbase", "SEC"]
-AIRDROP_MAIN = ["airdrop"]
-AIRDROP_SUPPORT = ["eligible", "snapshot", "distribution", "claim", "confirmed", "binance", "launch", "token"]
-
-def send_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    requests.post(url, data=payload)
+translator = Translator()
 
 def translate_text(text):
-    try:
-        url = "https://libretranslate.de/translate"
-        payload = {
-            "q": text,
-            "source": "en",
-            "target": "ar",
-            "format": "text"
-        }
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(url, json=payload, headers=headers)
-        result = response.json()
-        return result["translatedText"]
-    except Exception:
-        return f"(ترجمة فشلت): {text}"
+    result = translator.translate(text, src='en', dest='ar')
+    return result.text
 
-def classify_news(title):
-    title_lower = title.lower()
+def is_trending(news_item):
+    return news_item.get("votes", {}).get("positive", 0) >= 20
 
-    if any(main in title_lower for main in AIRDROP_MAIN) and any(support in title_lower for support in AIRDROP_SUPPORT):
-        return "🎁 فرصة Airdrop"
+def is_mining_related(text):
+    mining_keywords = ["mining", "hashrate", "ASIC", "Antminer", "Whatsminer", "Ethereum mining"]
+    return any(keyword.lower() in text.lower() for keyword in mining_keywords)
 
-    for word in TREND_KEYWORDS:
-        if word in title_lower:
-            return "✅ خبر ترند"
+def is_airdrop_related(text):
+    airdrop_keywords = ["airdrop", "claim", "snapshot", "retroactive", "free token"]
+    return any(keyword.lower() in text.lower() for keyword in airdrop_keywords)
 
-    for word in IMPORTANT_KEYWORDS:
-        if word in title_lower:
-            return "✅ خبر مهم"
+def is_important(text):
+    important_keywords = ["bitcoin", "ethereum", "binance", "SEC", "ETF", "blackrock", "coinbase", "spot trading"]
+    return any(keyword.lower() in text.lower() for keyword in important_keywords)
 
-    return None
-
-def fetch_crypto():
-    seen_links = []
-
-    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=hot"
+def fetch_crypto_news():
+    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     response = requests.get(url)
-    data = response.json()
+    if response.status_code != 200:
+        print("Error fetching data:", response.status_code)
+        return
 
-    if "results" in data and len(data["results"]) > 0:
-        for post in data["results"]:
-            title = post["title"]
-            link = post["url"]
+    news_items = response.json().get("results", [])
+    for item in news_items:
+        title = item.get("title", "")
+        url = item.get("url", "")
+        translated = translate_text(title)
 
-            if link in seen_links:
-                continue
-
-            classification = classify_news(title)
-            if classification:
-                translated_title = translate_text(title)
-                message = f"{classification}:\n\n{translated_title}\n\nالمصدر: {link}"
-                send_message(message)
-                seen_links.append(link)
-                break
+        if is_airdrop_related(title):
+            message = f"🔵 تصنيف: Airdrop\n{translated}\n{url}"
+        elif is_mining_related(title):
+            message = f"⚒️ تصنيف: تعدين مهم جدًا\n{translated}\n{url}"
+        elif is_trending(item):
+            message = f"🔥 تصنيف: ترند\n{translated}\n{url}"
+        elif is_important(title):
+            message = f"📌 تصنيف: خبر مهم\n{translated}\n{url}"
         else:
-            send_message("🔄 تم الفحص - فيه أخبار لكن كلها مكررة أو غير مهمة.")
-    else:
-        send_message("🔄 تم الفحص - ما فيه أخبار جديدة حالياً.")
+            continue  # تجاهل الأخبار اللي مو ضمن المعايير
 
-# تشغيل البوت
-send_message("✅ البوت اشتغل مع تصنيف Airdrop (المهم فقط) + ترند + مهم.")
-fetch_crypto()
+        send_to_telegram(message)
+
+def send_to_telegram(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {"chat_id": CHAT_ID, "text": message}
+    response = requests.post(url, data=data)
+    if response.status_code != 200:
+        print("فشل إرسال الخبر للتليجرام:", response.status_code)
+
+if __name__ == "__main__":
+    while True:
+        fetch_crypto_news()
+        time.sleep(600)  # كل 10 دقائق
