@@ -1,40 +1,45 @@
 import requests
 
-# بيانات البوت
+# إعدادات البوت
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# دالة إعادة الصياغة البشرية مع العنوان
+# إعادة الصياغة البشرية
 def rewrite_human_friendly(title):
+    if not title:
+        return None
+
     title_lower = title.lower()
 
     if "airdrop" in title_lower:
-        return "تم الإعلان عن Airdrop جديد لمشروع كريبتو، تابع التفاصيل."
+        return "تم الإعلان عن Airdrop جديد، تابع التفاصيل."
     elif "binance" in title_lower and "support" in title_lower:
-        return "منصة Binance أعلنت دعم لعملة أو مشروع جديد، مما قد يؤثر على سعره."
+        return "منصة Binance أعلنت دعمًا لعملة جديدة."
     elif "whale" in title_lower and "sell" in title_lower:
-        return "حوت كريبتو باع كمية كبيرة من العملات، وقد يؤثر ذلك على السوق."
+        return "حوت كريبتو قام ببيع كبير، قد يؤثر على السوق."
     elif "launch" in title_lower or "released" in title_lower:
-        return "إطلاق رسمي لمنتج أو مشروع جديد في عالم الكريبتو."
+        return "إطلاق رسمي لمشروع أو منتج جديد."
     elif "testnet" in title_lower or "mainnet" in title_lower:
-        return "تم إطلاق شبكة اختبارية أو رئيسية لمشروع جديد."
+        return "إطلاق شبكة اختبارية أو رئيسية لمشروع كريبتو."
     elif "etf" in title_lower or "sec" in title_lower:
-        return "الخبر يتعلق بصناديق ETF أو بتحديث تنظيمي من هيئة SEC."
+        return "تحديث تنظيمي أو خبر متعلق بصناديق ETF."
     elif "partnership" in title_lower or "collaborat" in title_lower:
-        return "فيه شراكة جديدة بين كيانات كريبتو، ممكن تفتح فرص كبيرة."
+        return "شراكة جديدة بين جهات في عالم الكريبتو."
     elif "hack" in title_lower or "exploit" in title_lower:
-        return "تحذير: حصل اختراق أو استغلال ثغرة أمنية."
+        return "تحذير: تم اكتشاف اختراق أو ثغرة أمنية."
     elif "btc" in title_lower and "recovery" in title_lower:
-        return "البيتكوين يشهد موجة تعافي، مع تفاؤل بإمكانية تجاوز حاجز 100,000 دولار."
+        return "البيتكوين يشهد تعافي وارتفاع في السعر."
     elif "investment" in title_lower or "funding" in title_lower:
-        return "تم الإعلان عن استثمار أو جولة تمويل كبيرة لمشروع جديد."
+        return "خبر عن تمويل جديد أو استثمار كبير."
+    elif "stablecoin" in title_lower:
+        return "زيادة الاهتمام بعملات الـStablecoin في الأسواق."
     elif "token" in title_lower and "utility" in title_lower:
-        return "تحديث جديد يخص فائدة واستخدام التوكن في أحد المشاريع."
+        return "تحديث جديد يخص فائدة التوكن واستخدامه."
     else:
-        return None  # غير مفهوم تمامًا
+        return None
 
-# إرسال رسالة إلى تيليجرام
+# إرسال رسالة لتليجرام
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": message}
@@ -43,7 +48,7 @@ def send_to_telegram(message):
     except Exception as e:
         print(f"Telegram Error: {e}")
 
-# جلب وتحليل الأخبار
+# جلب الأخبار ومعالجتها
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&public=true"
     try:
@@ -56,24 +61,22 @@ def fetch_crypto_news():
         send_to_telegram("❌ خطأ في الاتصال بمصدر الأخبار.")
         return
 
-    sent_anything = False
+    if not news_items:
+        send_to_telegram("✅ تم الفحص: لا توجد أخبار حالياً.")
+        return
 
     for item in news_items:
         title = item.get("title", "").strip()
         link = item.get("url", "").strip()
-
         rewritten = rewrite_human_friendly(title)
 
         if rewritten:
-            message = f"{rewritten}\nالعنوان: {title}\n{link}"
+            message = f"{rewritten}\nالعنوان: {title or 'غير متوفر'}\n{link}"
         else:
-            message = f"الخبر غير واضح تمامًا لكن عنوانه:\n{title}\n{link}"
+            fallback_title = title if title else "لم يتم العثور على عنوان."
+            message = f"عنوان مثير للاهتمام في سوق الكريبتو، التفاصيل في الخبر:\n{fallback_title}\n{link}"
 
         send_to_telegram(message)
-        sent_anything = True
-
-    if not sent_anything:
-        send_to_telegram("✅ تم الفحص: لا يوجد أخبار حالياً تنطبق عليها الشروط.")
 
 # تشغيل البوت
 if __name__ == "__main__":
