@@ -64,3 +64,4 @@ if __name__ == "__main__":
     while True:
         fetch_crypto_news()
         time.sleep(600)  # كل 10 دقائق
+# Force deploy update
