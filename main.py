@@ -5,30 +5,34 @@ TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
-# إعادة صياغة العنوان بلغة بشرية
+# دالة إعادة الصياغة البشرية مع العنوان
 def rewrite_human_friendly(title):
     title_lower = title.lower()
 
     if "airdrop" in title_lower:
-        return "تم الإعلان عن Airdrop جديد، توزيع مجاني لعملة أو مشروع جديد في الكريبتو."
+        return "تم الإعلان عن Airdrop جديد لمشروع كريبتو، تابع التفاصيل."
     elif "binance" in title_lower and "support" in title_lower:
-        return "منصة Binance أعلنت دعم عملة جديدة، مما قد يؤثر على سعرها خلال الساعات القادمة."
-    elif "launch" in title_lower or "released" in title_lower:
-        return "إطلاق رسمي لمشروع أو منتج جديد في سوق الكريبتو، التفاصيل في الخبر."
+        return "منصة Binance أعلنت دعم لعملة أو مشروع جديد، مما قد يؤثر على سعره."
     elif "whale" in title_lower and "sell" in title_lower:
-        return "حوت كريبتو قام بعملية بيع كبيرة، قد تكون بسبب تراجع الأرباح أو توقع انخفاض."
-    elif "hack" in title_lower or "exploit" in title_lower:
-        return "تحذير: حصل اختراق أو ثغرة أمنية في أحد المشاريع، التفاصيل في الخبر."
-    elif "partnership" in title_lower or "collaborat" in title_lower:
-        return "فيه شراكة أو تعاون جديد بين شركات في عالم الكريبتو، مما قد يفتح فرص جديدة."
+        return "حوت كريبتو باع كمية كبيرة من العملات، وقد يؤثر ذلك على السوق."
+    elif "launch" in title_lower or "released" in title_lower:
+        return "إطلاق رسمي لمنتج أو مشروع جديد في عالم الكريبتو."
+    elif "testnet" in title_lower or "mainnet" in title_lower:
+        return "تم إطلاق شبكة اختبارية أو رئيسية لمشروع جديد."
     elif "etf" in title_lower or "sec" in title_lower:
-        return "تحديث يتعلق بصناديق ETF أو الجهات التنظيمية، ممكن يأثر على حركة السوق."
+        return "الخبر يتعلق بصناديق ETF أو بتحديث تنظيمي من هيئة SEC."
+    elif "partnership" in title_lower or "collaborat" in title_lower:
+        return "فيه شراكة جديدة بين كيانات كريبتو، ممكن تفتح فرص كبيرة."
+    elif "hack" in title_lower or "exploit" in title_lower:
+        return "تحذير: حصل اختراق أو استغلال ثغرة أمنية."
     elif "btc" in title_lower and "recovery" in title_lower:
-        return "البيتكوين يشهد موجة تعافي في السعر، وسط تفاؤل حول السوق."
-    elif "funding" in title_lower or "investment" in title_lower:
-        return "استثمار جديد أو تمويل كبير تم الإعلان عنه في مشروع كريبتو."
+        return "البيتكوين يشهد موجة تعافي، مع تفاؤل بإمكانية تجاوز حاجز 100,000 دولار."
+    elif "investment" in title_lower or "funding" in title_lower:
+        return "تم الإعلان عن استثمار أو جولة تمويل كبيرة لمشروع جديد."
+    elif "token" in title_lower and "utility" in title_lower:
+        return "تحديث جديد يخص فائدة واستخدام التوكن في أحد المشاريع."
     else:
-        return "عنوان مثير للاهتمام في سوق الكريبتو، التفاصيل في الخبر."
+        return None  # غير مفهوم تمامًا
 
 # إرسال رسالة إلى تيليجرام
 def send_to_telegram(message):
@@ -55,10 +59,16 @@ def fetch_crypto_news():
     sent_anything = False
 
     for item in news_items:
-        title = item.get("title", "")
-        link = item.get("url", "")
+        title = item.get("title", "").strip()
+        link = item.get("url", "").strip()
+
         rewritten = rewrite_human_friendly(title)
-        message = f"{rewritten}\n{link}"
+
+        if rewritten:
+            message = f"{rewritten}\nالعنوان: {title}\n{link}"
+        else:
+            message = f"الخبر غير واضح تمامًا لكن عنوانه:\n{title}\n{link}"
+
         send_to_telegram(message)
         sent_anything = True
 
