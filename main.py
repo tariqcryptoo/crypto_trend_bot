@@ -30,7 +30,7 @@ def rewrite_human_friendly(title):
     else:
         return "عنوان مثير للاهتمام في سوق الكريبتو، التفاصيل في الخبر."
 
-# إرسال رسالة تيليجرام
+# إرسال رسالة إلى تيليجرام
 def send_to_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": message}
