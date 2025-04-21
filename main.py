@@ -1,6 +1,5 @@
 import requests
-import html
-import re
+import time
 from deep_translator import GoogleTranslator
 from telegram import Bot
 
@@ -10,23 +9,22 @@ CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
 bot = Bot(token=TELEGRAM_TOKEN)
-sent_ids = []
 
-# استخراج اسم الموقع من الرابط
+# استخراج اسم المصدر من الرابط
 def extract_source(url):
     try:
-        return re.search(r"https?://([^/]+)/", url).group(1)
+        return url.split("/")[2].replace("www.", "")
     except:
         return "crypto site"
 
-# ترجمة العنوان والمحتوى
+# ترجمة نص إلى العربية
 def human_translate(text):
     try:
         return GoogleTranslator(source='en', target='ar').translate(text)
     except:
         return "⚠️ فشل الترجمة"
 
-# إرسال الرسالة إلى تيليجرام
+# إرسال رسالة إلى تيليجرام
 def send_to_telegram(title, url, content):
     source = extract_source(url)
     message = (
@@ -37,7 +35,7 @@ def send_to_telegram(title, url, content):
     )
     bot.send_message(chat_id=CHAT_ID, text=message)
 
-# جلب الأخبار من CryptoPanic
+# جلب الأخبار
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=important"
     response = requests.get(url)
@@ -46,14 +44,13 @@ def fetch_crypto_news():
         return
 
     data = response.json()
-    posts = data.get("results", [])[:5]  # أرسل فقط 5 أخبار
+    posts = data.get("results", [])[:5]
+
+    if not posts:
+        bot.send_message(chat_id=CHAT_ID, text="✅ البوت شغال: لا توجد أخبار مهمة حالياً.")
+        return
 
     for post in posts:
-        post_id = post.get("id")
-        if post_id in sent_ids:
-            continue  # منع التكرار
-        sent_ids.append(post_id)
-
         title = post.get("title", "")
         link = post.get("url", "")
         content = post.get("body", "") or post.get("description", "")
@@ -62,6 +59,7 @@ def fetch_crypto_news():
             continue
 
         send_to_telegram(title, link, content)
+        time.sleep(2)
 
 # تشغيل البوت
 fetch_crypto_news()
