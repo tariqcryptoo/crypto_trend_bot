@@ -1,65 +1,58 @@
+import asyncio
 import requests
-import time
-from deep_translator import GoogleTranslator
 from telegram import Bot
+from deep_translator import GoogleTranslator
 
-# إعدادات البوت
+# بيانات التوكن والقروب
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
-CRYPTO_API_KEY = "9889e4a8021167e15bc0d74858809a6e0195fa2e"
 
 bot = Bot(token=TELEGRAM_TOKEN)
 
-# استخراج اسم المصدر من الرابط
-def extract_source(url):
+# ترجمة + إعادة صياغة بشرية
+def humanize_text(text):
     try:
-        return url.split("/")[2].replace("www.", "")
-    except:
-        return "crypto site"
+        translated = GoogleTranslator(source='auto', target='ar').translate(text)
+        if len(translated) > 400:
+            return translated[:400] + "..."
+        return translated
+    except Exception as e:
+        return "لم نستطع ترجمة الخبر حالياً."
 
-# ترجمة نص إلى العربية
-def human_translate(text):
-    try:
-        return GoogleTranslator(source='en', target='ar').translate(text)
-    except:
-        return "⚠️ فشل الترجمة"
-
-# إرسال رسالة إلى تيليجرام
-def send_to_telegram(title, url, content):
-    source = extract_source(url)
-    message = (
-        f"عنوان مثير للاهتمام في سوق الكريبتو،\n"
-        f"{human_translate(title)}:\n\n"
-        f"المصدر: {source}\n"
-        f"التفاصيل في الخبر:\n{url}"
-    )
-    bot.send_message(chat_id=CHAT_ID, text=message)
-
-# جلب الأخبار
+# جلب الأخبار من CryptoPanic
 def fetch_crypto_news():
-    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&filter=important"
+    url = "https://cryptopanic.com/api/v1/posts/?auth_token=9889e4a8021167e15bc0d74858809a6e0195fa2e&filter=hot"
     response = requests.get(url)
-    if response.status_code != 200:
-        bot.send_message(chat_id=CHAT_ID, text="⚠️ فشل جلب الأخبار.")
-        return
+    if response.status_code == 200:
+        data = response.json()
+        return data["results"]
+    else:
+        return []
 
-    data = response.json()
-    posts = data.get("results", [])[:5]
+# تجهيز الرسالة
+def prepare_message(post):
+    title = post["title"]
+    link = post["url"]
+    source = post["domain"]
+    summary = humanize_text(post["content"] or post["title"])
+    message = f"""عنوان مثير للاهتمام في سوق الكريبتو،
+{summary}
+المصدر: {source}
+التفاصيل في الخبر:
+{link}"""
+    return message
 
+# إرسال الرسائل
+async def main():
+    posts = fetch_crypto_news()
     if not posts:
-        bot.send_message(chat_id=CHAT_ID, text="✅ البوت شغال: لا توجد أخبار مهمة حالياً.")
+        await bot.send_message(chat_id=CHAT_ID, text="ما في أخبار حالياً.")
         return
 
-    for post in posts:
-        title = post.get("title", "")
-        link = post.get("url", "")
-        content = post.get("body", "") or post.get("description", "")
+    for post in posts[:3]:  # نرسل أول 3 فقط عشان ما نزعج التيليجرام
+        msg = prepare_message(post)
+        await bot.send_message(chat_id=CHAT_ID, text=msg)
+        await asyncio.sleep(5)
 
-        if not link or not title:
-            continue
-
-        send_to_telegram(title, link, content)
-        time.sleep(2)
-
-# تشغيل البوت
-fetch_crypto_news()
+if __name__ == "__main__":
+    asyncio.run(main())
