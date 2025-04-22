@@ -38,9 +38,10 @@ def prepare_message(post):
     url = post.get("url", "")
     translated = translate_text(clean_html(content))
     classification = classify_post(post)
-    
+
+    # تعديل الاختبار: لو ما فيه تصنيف، نخليه "تجربة"
     if not classification:
-        return None
+        classification = "تجربة"
 
     message = f"#{classification}\n\n"
     message += f"**{title}**\n\n"
