@@ -59,19 +59,20 @@ def fetch_crypto_news():
 
 # نقطة البداية
 def main():
+    print("[تشغيل] بدأ البوت الآن...")
     posts = fetch_crypto_news()
-    print(f"[✓] عدد الأخبار: {len(posts)}")
+    print(f"[تشغيل] عدد الأخبار المستلمة: {len(posts)}")
 
     if not posts:
-        print("[!] ما فيه أخبار جديدة.")
+        print("[!] لا توجد أخبار حالياً.")
     else:
-        for post in posts[:3]:  # نرسل أول 3 فقط لتجربة سريعة
+        for post in posts[:3]:  # فقط أول 3 أخبار لتجربة أسرع
             try:
                 msg = prepare_message(post)
                 send_telegram_message(msg)
                 time.sleep(2)
             except Exception as e:
-                print(f"[!] خطأ أثناء المعالجة: {e}")
+                print(f"[!] خطأ أثناء معالجة الخبر: {e}")
 
 if __name__ == "__main__":
     main()
