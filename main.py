@@ -1,14 +1,16 @@
 import requests
 import time
+import re
 
 # إعدادات البوت
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
 
-# تهريب Markdown
-def escape_markdown(text):
-    return text.replace('*', '\\*').replace('_', '\\_').replace('[', '\\[').replace('`', '\\`')
+# تهريب Markdown V2
+def escape_markdown_v2(text):
+    escape_chars = r'[_*$begin:math:display$$end:math:display$()~`>#+\-=|{}.!]'
+    return re.sub(escape_chars, lambda match: f"\\{match.group(0)}", text)
 
 # تصنيف مبسط للخبر
 def classify_post(post):
@@ -23,9 +25,9 @@ def classify_post(post):
 
 # تجهيز الرسالة
 def prepare_message(post):
-    title = escape_markdown(post.get("title", "لا يوجد عنوان"))
-    url = post.get("url", "")
-    classification = classify_post(post)
+    title = escape_markdown_v2(post.get("title", "لا يوجد عنوان"))
+    url = escape_markdown_v2(post.get("url", ""))
+    classification = escape_markdown_v2(classify_post(post))
 
     print("---")
     print(f"[خبر] العنوان: {title}")
@@ -43,7 +45,7 @@ def send_telegram_message(message):
     payload = {
         "chat_id": CHAT_ID,
         "text": message,
-        "parse_mode": "Markdown"
+        "parse_mode": "MarkdownV2"
     }
     response = requests.post(url, data=payload)
     if response.status_code == 200:
