@@ -6,6 +6,10 @@ TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
 
+# تهريب Markdown
+def escape_markdown(text):
+    return text.replace('*', '\\*').replace('_', '\\_').replace('[', '\\[').replace('`', '\\`')
+
 # تصنيف مبسط للخبر
 def classify_post(post):
     title = post.get("title", "").lower()
@@ -19,7 +23,7 @@ def classify_post(post):
 
 # تجهيز الرسالة
 def prepare_message(post):
-    title = post.get("title", "لا يوجد عنوان")
+    title = escape_markdown(post.get("title", "لا يوجد عنوان"))
     url = post.get("url", "")
     classification = classify_post(post)
 
@@ -29,7 +33,7 @@ def prepare_message(post):
     print(f"[خبر] الرابط: {url}")
 
     message = f"#{classification}\n\n"
-    message += f"**{title}**\n\n"
+    message += f"*{title}*\n\n"
     message += f"رابط الخبر: {url}"
     return message
 
