@@ -1,6 +1,7 @@
 import requests
 import time
 import html
+from datetime import datetime, timedelta
 
 # إعدادات البوت
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
@@ -59,26 +60,43 @@ def send_telegram_message(message):
     else:
         print(f"[!] فشل إرسال الرسالة. كود: {response.status_code}, رد: {response.text}")
 
-# جلب الأخبار من CryptoPanic
+# جلب الأخبار الجديدة فقط (آخر 6 ساعات)
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&kind=news&public=true"
     response = requests.get(url)
-    if response.status_code == 200:
-        print("[✓] تم جلب الأخبار.")
-        return response.json().get("results", [])
-    print(f"[!] فشل جلب الأخبار: {response.status_code}")
-    return []
+    if response.status_code != 200:
+        print(f"[!] فشل جلب الأخبار: {response.status_code}")
+        return []
+
+    results = response.json().get("results", [])
+    filtered = []
+    now = datetime.utcnow()
+    cutoff = now - timedelta(hours=6)
+
+    for post in results:
+        published_at = post.get("published_at")
+        if not published_at:
+            continue
+        try:
+            published_time = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
+            if published_time > cutoff:
+                filtered.append(post)
+        except Exception as e:
+            print(f"[!] خطأ في قراءة وقت النشر: {e}")
+            continue
+
+    return filtered
 
 # نقطة البداية
 def main():
     print("[تشغيل] بدأ البوت الآن...")
     posts = fetch_crypto_news()
-    print(f"[تشغيل] عدد الأخبار المستلمة: {len(posts)}")
+    print(f"[تشغيل] عدد الأخبار الجديدة خلال آخر 6 ساعات: {len(posts)}")
 
     if not posts:
-        print("[!] لا توجد أخبار حالياً.")
+        print("[!] لا توجد أخبار حديثة.")
     else:
-        for post in posts[:3]:
+        for post in posts[:3]:  # إرسال أول 3 فقط
             try:
                 msg = prepare_message(post)
                 send_telegram_message(msg)
