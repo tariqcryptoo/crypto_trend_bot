@@ -7,15 +7,26 @@ TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
 
-# تصنيف مبسط للخبر
+# تصنيف ذكي للخبر
 def classify_post(post):
     title = post.get("title", "").lower()
-    if any(t in title for t in ["airdrop", "airdrops", "claim"]):
+    importance = post.get("importance", 0)
+    votes = post.get("votes", {}).get("positive", 0)
+
+    if any(word in title for word in ["airdrop", "claim", "snapshot"]):
         return "Airdrop"
-    if post.get("importance", 0) >= 3:
-        return "مهم"
-    if post.get("votes", {}).get("positive", 0) > 10:
-        return "ترند"
+    if any(word in title for word in ["price analysis", "price prediction", "btc analysis", "eth analysis"]):
+        return "تحليل سعر"
+    if any(word in title for word in ["partnership", "collaborates", "joins forces", "integrates"]):
+        return "شراكة"
+    if any(word in title for word in ["launch", "mainnet", "testnet", "introduces", "unveils"]):
+        return "مشروع جديد"
+    if any(word in title for word in ["hack", "exploit", "rugpull", "scam", "security breach"]):
+        return "تحذير"
+    if any(word in title for word in ["funding", "raises", "investment", "vc", "backed"]):
+        return "تمويل"
+    if importance >= 3 or votes > 10:
+        return "مهم / ترند"
     return "تجربة"
 
 # تجهيز الرسالة
