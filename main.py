@@ -5,21 +5,25 @@ import html
 import re
 
 # إعدادات البوت
-TELEGRAM_TOKEN = "توكن_البوت"
+TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
-CRYPTO_API_KEY = "مفتاح_CryptoPanic"
+CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
 
 # الترجمة الذكية
 def translate_text(text):
-    return GoogleTranslator(source='auto', target='ar').translate(text)
+    try:
+        return GoogleTranslator(source='auto', target='ar').translate(text)
+    except Exception as e:
+        print(f"[!] فشل في الترجمة: {e}")
+        return "تعذر ترجمة النص."
 
-# فلترة HTML
+# تنظيف HTML من النص
 def clean_html(raw_html):
     cleanr = re.compile('<.*?>')
     cleantext = re.sub(cleanr, '', raw_html)
     return html.unescape(cleantext)
 
-# تحديد نوع الخبر
+# تصنيف الخبر
 def classify_post(post):
     title = post.get("title", "").lower()
     tags = post.get("tags", [])
@@ -39,9 +43,12 @@ def prepare_message(post):
     translated = translate_text(clean_html(content))
     classification = classify_post(post)
 
-    # أثناء الاختبار: لو ما فيه تصنيف، نعتبره "تجربة"
     if not classification:
         classification = "تجربة"
+
+    print(f"[✓] الخبر: {title}")
+    print(f"[✓] التصنيف: {classification}")
+    print(f"[✓] الترجمة: {translated[:60]}...")
 
     message = f"#{classification}\n\n"
     message += f"**{title}**\n\n"
@@ -49,7 +56,7 @@ def prepare_message(post):
     message += f"رابط الخبر: {url}"
     return message
 
-# إرسال لتليجرام
+# إرسال الرسالة إلى تيليجرام
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
@@ -58,24 +65,31 @@ def send_telegram_message(message):
         "parse_mode": "Markdown"
     }
     response = requests.post(url, data=payload)
+    if response.status_code == 200:
+        print("[✓] تم إرسال الرسالة لتليجرام.")
+    else:
+        print(f"[!] فشل إرسال الرسالة، الكود: {response.status_code}, الرد: {response.text}")
     return response.status_code == 200
 
-# جلب الأخبار
+# جلب الأخبار من CryptoPanic
 def fetch_crypto_news():
     url = f"https://cryptopanic.com/api/v1/posts/?auth_token={CRYPTO_API_KEY}&kind=news&public=true"
     response = requests.get(url)
     if response.status_code == 200:
+        print("[✓] تم جلب الأخبار بنجاح.")
         return response.json().get("results", [])
+    print(f"[!] فشل في جلب الأخبار: {response.status_code}")
     return []
 
 # نقطة البداية
 def main():
     posts = fetch_crypto_news()
+    print(f"[✓] عدد الأخبار المستلمة: {len(posts)}")
     for post in posts:
         msg = prepare_message(post)
         if msg:
             send_telegram_message(msg)
-            time.sleep(2)  # تأخير لتفادي حظر تيليجرام
+            time.sleep(2)
 
 if __name__ == "__main__":
     main()
