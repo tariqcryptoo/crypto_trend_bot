@@ -1,16 +1,11 @@
 import requests
 import time
-import re
+import html
 
 # إعدادات البوت
 TELEGRAM_TOKEN = "7239933938:AAEhm_lWwAr7JcGomW8-EJa_rg0_BbpczdQ"
 CHAT_ID = "-4734806120"
 CRYPTO_API_KEY = "af664841cdcd4c27a050b06660d1b2f0"
-
-# تهريب Markdown V2
-def escape_markdown_v2(text):
-    escape_chars = r'[_*$begin:math:display$$end:math:display$()~`>#+\-=|{}.!]'
-    return re.sub(escape_chars, lambda match: f"\\{match.group(0)}", text)
 
 # تصنيف مبسط للخبر
 def classify_post(post):
@@ -25,18 +20,18 @@ def classify_post(post):
 
 # تجهيز الرسالة
 def prepare_message(post):
-    title = escape_markdown_v2(post.get("title", "لا يوجد عنوان"))
-    url = escape_markdown_v2(post.get("url", ""))
-    classification = escape_markdown_v2(classify_post(post))
+    title = html.escape(post.get("title", "لا يوجد عنوان"))
+    url = html.escape(post.get("url", ""))
+    classification = html.escape(classify_post(post))
 
     print("---")
     print(f"[خبر] العنوان: {title}")
     print(f"[خبر] التصنيف: {classification}")
     print(f"[خبر] الرابط: {url}")
 
-    message = f"#{classification}\n\n"
-    message += f"*{title}*\n\n"
-    message += f"رابط الخبر: {url}"
+    message = f"<b>#{classification}</b>\n\n"
+    message += f"<b>{title}</b>\n\n"
+    message += f"<a href='{url}'>رابط الخبر</a>"
     return message
 
 # إرسال الرسالة إلى تيليجرام
@@ -45,7 +40,7 @@ def send_telegram_message(message):
     payload = {
         "chat_id": CHAT_ID,
         "text": message,
-        "parse_mode": "MarkdownV2"
+        "parse_mode": "HTML"
     }
     response = requests.post(url, data=payload)
     if response.status_code == 200:
@@ -72,13 +67,13 @@ def main():
     if not posts:
         print("[!] لا توجد أخبار حالياً.")
     else:
-        for post in posts[:3]:  # فقط أول 3 أخبار لتجربة أسرع
+        for post in posts[:3]:
             try:
                 msg = prepare_message(post)
                 send_telegram_message(msg)
                 time.sleep(2)
             except Exception as e:
-                print(f"[!] خطأ أثناء معالجة الخبر: {e}")
+                print(f"[!] خطأ أثناء المعالجة: {e}")
 
 if __name__ == "__main__":
     main()
