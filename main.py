@@ -39,7 +39,7 @@ def prepare_message(post):
     translated = translate_text(clean_html(content))
     classification = classify_post(post)
 
-    # تعديل الاختبار: لو ما فيه تصنيف، نخليه "تجربة"
+    # أثناء الاختبار: لو ما فيه تصنيف، نعتبره "تجربة"
     if not classification:
         classification = "تجربة"
 
@@ -75,7 +75,7 @@ def main():
         msg = prepare_message(post)
         if msg:
             send_telegram_message(msg)
-            time.sleep(2)  # لتفادي الحظر من التيليجرام
+            time.sleep(2)  # تأخير لتفادي حظر تيليجرام
 
 if __name__ == "__main__":
     main()
