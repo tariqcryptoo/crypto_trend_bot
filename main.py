@@ -23,8 +23,10 @@ def prepare_message(post):
     url = post.get("url", "")
     classification = classify_post(post)
 
-    print(f"[✓] عنوان الخبر: {title}")
-    print(f"[✓] التصنيف: {classification}")
+    print("---")
+    print(f"[خبر] العنوان: {title}")
+    print(f"[خبر] التصنيف: {classification}")
+    print(f"[خبر] الرابط: {url}")
 
     message = f"#{classification}\n\n"
     message += f"**{title}**\n\n"
@@ -43,7 +45,7 @@ def send_telegram_message(message):
     if response.status_code == 200:
         print("[✓] تم إرسال الرسالة لتليجرام.")
     else:
-        print(f"[!] فشل إرسال الرسالة، كود الاستجابة: {response.status_code}, الرد: {response.text}")
+        print(f"[!] فشل إرسال الرسالة. كود: {response.status_code}, رد: {response.text}")
 
 # جلب الأخبار من CryptoPanic
 def fetch_crypto_news():
@@ -59,10 +61,17 @@ def fetch_crypto_news():
 def main():
     posts = fetch_crypto_news()
     print(f"[✓] عدد الأخبار: {len(posts)}")
-    for post in posts[:3]:  # نرسل فقط أول 3 أخبار لتجربة أسرع
-        msg = prepare_message(post)
-        send_telegram_message(msg)
-        time.sleep(2)
+
+    if not posts:
+        print("[!] ما فيه أخبار جديدة.")
+    else:
+        for post in posts[:3]:  # نرسل أول 3 فقط لتجربة سريعة
+            try:
+                msg = prepare_message(post)
+                send_telegram_message(msg)
+                time.sleep(2)
+            except Exception as e:
+                print(f"[!] خطأ أثناء المعالجة: {e}")
 
 if __name__ == "__main__":
     main()
