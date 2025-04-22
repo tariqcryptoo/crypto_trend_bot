@@ -22,14 +22,14 @@ def classify_post(post):
 def prepare_message(post):
     title = html.escape(post.get("title", "لا يوجد عنوان"))
     url = html.escape(post.get("url", ""))
-    classification = html.escape(classify_post(post))
+    classification = html.escape(classify_post(post)).replace("#", "&#35;")
 
     print("---")
     print(f"[خبر] العنوان: {title}")
     print(f"[خبر] التصنيف: {classification}")
     print(f"[خبر] الرابط: {url}")
 
-    message = f"<b>#{classification}</b>\n\n"
+    message = f"<b>{classification}</b>\n\n"
     message += f"<b>{title}</b>\n\n"
     message += f"<a href='{url}'>رابط الخبر</a>"
     return message
